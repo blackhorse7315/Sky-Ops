@@ -494,7 +494,13 @@
         // -- APP STATE --
         let currentUser = null;
         let users = [];
-        let gSheetUrl = localStorage.getItem('skyops_gsheet_url') || "";
+        
+        // URL Google Sheets Hardcoded (Default)
+        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbzdAbDHubhTvXYarChXZpZjYtnEsnCAswnDSESxMYEAIupwrJ3Us2DqRyVJjxrDboMOpw/exec";
+        
+        // Mengambil dari localStorage jika ada, jika tidak gunakan DEFAULT
+        let gSheetUrl = localStorage.getItem('skyops_gsheet_url') || DEFAULT_GSHEET_URL;
+        
         let map;
         let userMarker;
         
@@ -616,7 +622,6 @@
 
             map = L.map('map', { zoomControl: true, attributionControl: false, layers: [layers.street] }).setView([-6.2, 106.8], 8);
 
-            // Create Blinking GPS Marker using DivIcon
             const pulseIcon = L.divIcon({
                 className: 'gps-pulse-icon',
                 html: `<div class="gps-pulse-container"><div class="gps-pulse-ring"></div><div class="gps-pulse-dot"></div></div>`,
