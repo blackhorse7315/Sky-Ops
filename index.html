@@ -66,11 +66,120 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Map Container Customization */
         #map {
             height: 100%;
             width: 100%;
+            border-radius: 1.5rem;
+            z-index: 10;
+        }
+
+        /* GPS Pulse Animation Styles */
+        .gps-pulse-container {
+            position: relative;
+            width: 20px;
+            height: 20px;
+        }
+
+        .gps-pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--primary);
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.8);
+        }
+
+        .gps-pulse-ring {
+            width: 30px;
+            height: 30px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: gps-pulse 2s infinite ease-out;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        @keyframes gps-pulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+
+        /* Map UI Overlay Styling */
+        .map-ui-overlay {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .layer-switcher {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--glass);
+            padding: 0.4rem;
             border-radius: 1rem;
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+        }
+
+        .layer-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .layer-btn:hover {
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .layer-btn.active {
+            background: #1e293b;
+            color: white;
+            border: 1px solid rgba(14, 165, 233, 0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .gps-btn {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.6rem 1rem;
+            border-radius: 0.75rem;
+            color: var(--primary);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            width: fit-content;
+        }
+
+        .gps-btn:hover {
+            background: rgba(14, 165, 233, 0.1);
+            transform: translateY(-2px);
         }
 
         .tab-active {
@@ -120,6 +229,16 @@
 
         .logo-glow {
             filter: drop-shadow(0 0 15px rgba(14, 165, 233, 0.4));
+        }
+
+        .leaflet-bar { border: none !important; }
+        .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+            background: var(--glass) !important;
+            color: white !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            backdrop-filter: blur(8px);
+            border-radius: 8px !important;
+            margin-bottom: 2px !important;
         }
     </style>
 </head>
@@ -224,12 +343,28 @@
 
         <main class="flex-1 p-6 overflow-hidden">
             <section id="content-map" class="h-full relative fade-in">
+                <!-- LEAFLET MAP CONTAINER -->
                 <div id="map"></div>
+
+                <!-- FLOATING MAP UI OVERLAY (TOP-LEFT) -->
+                <div class="map-ui-overlay">
+                    <div class="layer-switcher shadow-2xl">
+                        <button onclick="setMapLayer('satellite')" id="btn-layer-satellite" class="layer-btn" title="Satellite View">SATELLITE</button>
+                        <button onclick="setMapLayer('street')" id="btn-layer-street" class="layer-btn active" title="Street Map">STREET</button>
+                        <button onclick="setMapLayer('terrain')" id="btn-layer-terrain" class="layer-btn" title="Terrain Relief">TERRAIN</button>
+                    </div>
+                    
+                    <button onclick="centerGPS()" class="gps-btn shadow-xl">
+                        <i data-lucide="target"></i> CENTER GPS
+                    </button>
+                </div>
+
                 <!-- Mini HUD -->
                 <div class="absolute top-4 right-4 z-[1000] glass p-3 rounded-xl pointer-events-none">
                     <div class="flex items-center gap-3 text-[10px] font-mono">
-                        <div class="text-sky-400">SAT: <span class="text-white">8/12</span></div>
-                        <div class="text-emerald-400">GPS: <span class="text-white">FIXED</span></div>
+                        <div class="text-sky-400">SAT: <span class="text-white" id="sat-count">12/12</span></div>
+                        <div class="text-emerald-400">GPS: <span class="text-white">STABLE</span></div>
+                        <div class="text-orange-400">ACC: <span class="text-white" id="gps-accuracy">---</span></div>
                     </div>
                 </div>
             </section>
@@ -253,7 +388,7 @@
                         <div class="p-3 bg-indigo-500/10 rounded-2xl"><i data-lucide="database" class="text-indigo-400"></i></div>
                         <h2 class="text-xl font-bold tracking-tight">Navigation Data</h2>
                     </div>
-                    <p class="text-gray-500 text-sm italic">Loading AIRAC AIRSPACE data...</p>
+                    <p class="text-gray-500 text-sm italic">Accessing global waypoint records...</p>
                 </div>
             </section>
 
@@ -282,7 +417,6 @@
                                         <th class="py-4 px-2">Identification</th>
                                         <th class="py-4 px-2">Secret Code</th>
                                         <th class="py-4 px-2">Access Expiry</th>
-                                        <th class="py-4 px-2">Flight Link</th>
                                         <th class="py-4 px-2 text-right">Delete</th>
                                     </tr>
                                 </thead>
@@ -312,7 +446,7 @@
                                 <i data-lucide="smartphone" class="w-4 h-4 text-emerald-400"></i> App Shortcut
                             </h3>
                             <p class="text-[10px] text-gray-500 leading-relaxed mb-4">
-                                Untuk akses cepat di layar utama, klik tombol <span class="text-white font-bold">Bagikan/Menu Browser</span> lalu pilih <span class="text-white font-bold">"Tambahkan ke Layar Utama"</span>.
+                                Klik tombol <span class="text-white font-bold">Bagikan</span> lalu pilih <span class="text-white font-bold">"Tambahkan ke Layar Utama"</span>.
                             </p>
                             <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
                                 <img src="https://lh3.googleusercontent.com/d/1HzKe-3FS_hP-MjbOHc-mkyierhu5kVp-" class="w-8 h-8 object-contain">
@@ -362,6 +496,13 @@
         let users = [];
         let gSheetUrl = localStorage.getItem('skyops_gsheet_url') || "";
         let map;
+        let userMarker;
+        
+        let layers = {
+            street: null,
+            satellite: null,
+            terrain: null
+        };
 
         // -- INITIALIZATION --
         window.onload = () => {
@@ -379,9 +520,7 @@
             initMap();
         };
 
-        // Manifest & PWA Helper
         function initPWA() {
-            // Memberikan manifest dinamis
             const manifest = {
                 "name": "SkyOps Navigation Pro",
                 "short_name": "SkyOps",
@@ -389,21 +528,11 @@
                 "display": "standalone",
                 "background_color": "#020617",
                 "theme_color": "#020617",
-                "description": "Professional Flight GPS Navigation System",
-                "icons": [
-                    {
-                        "src": "https://lh3.googleusercontent.com/d/1HzKe-3FS_hP-MjbOHc-mkyierhu5kVp-",
-                        "sizes": "512x512",
-                        "type": "image/png"
-                    }
-                ]
+                "icons": [{ "src": "https://lh3.googleusercontent.com/d/1HzKe-3FS_hP-MjbOHc-mkyierhu5kVp-", "sizes": "512x512", "type": "image/png" }]
             };
-            const stringManifest = JSON.stringify(manifest);
-            const blob = new Blob([stringManifest], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
+            const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
             const linkTag = document.createElement('link');
-            linkTag.rel = 'manifest';
-            linkTag.href = manifestURL;
+            linkTag.rel = 'manifest'; linkTag.href = URL.createObjectURL(blob);
             document.head.appendChild(linkTag);
         }
 
@@ -433,20 +562,14 @@
             const table = document.getElementById('admin-table');
             if(loader) loader.classList.remove('hidden');
             if(table) table.classList.add('hidden');
-
             try {
                 const response = await fetch(`${gSheetUrl}?cb=${Date.now()}`);
                 users = await response.json();
                 if(currentUser && currentUser.role === 'admin') renderAdminUsers();
-            } catch (err) {
-                console.error("Cloud Error:", err);
-            } finally {
-                if(loader) loader.classList.add('hidden');
-                if(table) table.classList.remove('hidden');
-            }
+            } catch (err) { console.error("Cloud Error:", err); }
+            finally { if(loader) loader.classList.add('hidden'); if(table) table.classList.remove('hidden'); }
         }
 
-        // -- AUTH LOGIC --
         const loginForm = document.getElementById('login-form');
         loginForm.onsubmit = async (e) => {
             e.preventDefault();
@@ -454,48 +577,18 @@
             const p = document.getElementById('password').value;
             const errorEl = document.getElementById('login-error');
             const btn = document.getElementById('login-btn');
-
             errorEl.classList.add('hidden');
-            
-            if (u === 'admin' && p === 'ramdan28') {
-                launchApp({ username: 'Administrator', role: 'admin', expiry: 'Infinite' });
-                return;
-            }
-
-            if(!gSheetUrl) {
-                errorEl.textContent = "SYSTEM OFFLINE: Cloud Database not configured.";
-                errorEl.classList.remove('hidden');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = `<div class="loader"></div> SYNCHRONIZING...`;
-
+            if (u === 'admin' && p === 'ramdan28') { launchApp({ username: 'Administrator', role: 'admin', expiry: 'Infinite' }); return; }
+            if(!gSheetUrl) { errorEl.textContent = "SYSTEM OFFLINE: Cloud Database not configured."; errorEl.classList.remove('hidden'); return; }
+            btn.disabled = true; btn.innerHTML = `<div class="loader"></div> SYNCHRONIZING...`;
             await fetchUsers(); 
-            
             const foundUser = users.find(user => String(user.Username).toLowerCase() === u.toLowerCase() && String(user.Password) === p);
-            
             if (foundUser) {
-                const now = new Date();
-                const expiryDate = new Date(foundUser.ExpiryDate);
-                if (now > expiryDate) {
-                    errorEl.textContent = "ACCESS EXPIRED: Identity validation failed.";
-                    errorEl.classList.remove('hidden');
-                } else {
-                    launchApp({ 
-                        username: foundUser.Username, 
-                        role: 'user', 
-                        expiry: foundUser.ExpiryDate,
-                        url: foundUser.URL 
-                    });
-                }
-            } else {
-                errorEl.textContent = "INVALID CREDENTIALS: Denied by Cloud Core.";
-                errorEl.classList.remove('hidden');
-            }
-
-            btn.disabled = false;
-            btn.innerHTML = `AUTHENTICATE`;
+                const now = new Date(); const expiryDate = new Date(foundUser.ExpiryDate);
+                if (now > expiryDate) { errorEl.textContent = "ACCESS EXPIRED: Identity validation failed."; errorEl.classList.remove('hidden'); }
+                else { launchApp({ username: foundUser.Username, role: 'user', expiry: foundUser.ExpiryDate, url: foundUser.URL }); }
+            } else { errorEl.textContent = "INVALID CREDENTIALS: Denied by Cloud Core."; errorEl.classList.remove('hidden'); }
+            btn.disabled = false; btn.innerHTML = `AUTHENTICATE`;
         };
 
         function launchApp(user) {
@@ -504,132 +597,108 @@
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('header-greeting').textContent = `Welcome, Capt. ${user.username}`;
             document.getElementById('expiry-info').textContent = formatDate(user.expiry);
-            
             const urlContainer = document.getElementById('user-url-container');
             const urlLink = document.getElementById('user-flight-link');
-            if(user.role === 'user' && user.url) {
-                urlLink.href = user.url;
-                urlContainer.classList.remove('hidden');
-            } else {
-                urlContainer.classList.add('hidden');
-            }
-
+            if(user.role === 'user' && user.url) { urlLink.href = user.url; urlContainer.classList.remove('hidden'); }
+            else { urlContainer.classList.add('hidden'); }
             const adminTab = document.getElementById('tab-admin');
-            if (user.role === 'admin') {
-                adminTab.classList.remove('hidden');
-                renderAdminUsers();
-            } else {
-                adminTab.classList.add('hidden');
-                users = []; 
-            }
+            if (user.role === 'admin') { adminTab.classList.remove('hidden'); renderAdminUsers(); }
+            else { adminTab.classList.add('hidden'); users = []; }
             switchTab('map');
             lucide.createIcons();
         }
 
-        // -- ADMIN LOGIC --
+        // -- MAP FUNCTIONS --
+        function initMap() {
+            layers.street = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
+            layers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
+            layers.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 });
+
+            map = L.map('map', { zoomControl: true, attributionControl: false, layers: [layers.street] }).setView([-6.2, 106.8], 8);
+
+            // Create Blinking GPS Marker using DivIcon
+            const pulseIcon = L.divIcon({
+                className: 'gps-pulse-icon',
+                html: `<div class="gps-pulse-container"><div class="gps-pulse-ring"></div><div class="gps-pulse-dot"></div></div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            userMarker = L.marker([-6.2, 106.8], { icon: pulseIcon }).addTo(map);
+        }
+
+        function centerGPS() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const acc = position.coords.accuracy.toFixed(1);
+                    
+                    document.getElementById('gps-accuracy').textContent = `${acc}m`;
+                    map.setView([lat, lng], 14);
+                    userMarker.setLatLng([lat, lng]);
+                }, (error) => {
+                    alert("GPS Signal Blocked or Permission Denied.");
+                }, { enableHighAccuracy: true });
+            } else {
+                alert("GPS Hardware not detected on this device.");
+            }
+        }
+
+        function setMapLayer(type) {
+            Object.keys(layers).forEach(key => { if (map.hasLayer(layers[key])) map.removeLayer(layers[key]); });
+            map.addLayer(layers[type]);
+            ['street', 'satellite', 'terrain'].forEach(b => { document.getElementById(`btn-layer-${b}`).classList.remove('active'); });
+            document.getElementById(`btn-layer-${type}`).classList.add('active');
+        }
+
         async function addUser() {
             const u = document.getElementById('new-username').value.trim();
             const p = document.getElementById('new-password').value.trim();
             const e = document.getElementById('new-expiry').value;
             const url = document.getElementById('new-url').value.trim();
             const btn = document.getElementById('add-user-btn');
-
             if (!u || !p || !e || !gSheetUrl) return;
-
-            btn.disabled = true;
-            btn.innerHTML = `<div class="loader"></div> SYNCING...`;
-
+            btn.disabled = true; btn.innerHTML = `<div class="loader"></div> SYNCING...`;
             try {
-                await fetch(gSheetUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'add', username: u, password: p, expiry: e, url: url })
-                });
-                
-                setTimeout(async () => {
-                    await fetchUsers();
-                    closeUserModal();
-                    btn.disabled = false;
-                    btn.innerHTML = `PUBLISH`;
-                }, 1500);
-            } catch (err) {
-                btn.disabled = false;
-            }
+                await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'add', username: u, password: p, expiry: e, url: url }) });
+                setTimeout(async () => { await fetchUsers(); closeUserModal(); btn.disabled = false; btn.innerHTML = `PUBLISH`; }, 1500);
+            } catch (err) { btn.disabled = false; }
         }
 
         async function deleteUser(username) {
             if(!confirm(`PERMANENT ACTION: Purge data for pilot ${username}?`)) return;
-            try {
-                await fetch(gSheetUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'delete', username: username })
-                });
-                setTimeout(() => fetchUsers(), 1500);
-            } catch (err) {
-                alert("Cloud Sync Failed.");
-            }
+            try { await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete', username: username }) }); setTimeout(() => fetchUsers(), 1500); }
+            catch (err) { alert("Cloud Sync Failed."); }
         }
 
         function renderAdminUsers() {
-            const list = document.getElementById('admin-user-list');
-            if(!list) return;
+            const list = document.getElementById('admin-user-list'); if(!list) return;
             list.innerHTML = "";
             users.forEach((u) => {
-                const row = document.createElement('tr');
-                row.className = "hover:bg-white/[0.02] transition-colors group";
-                row.innerHTML = `
-                    <td class="py-5 px-2 font-bold text-sky-100">${u.Username}</td>
-                    <td class="py-5 px-2 font-mono text-[10px] opacity-40 group-hover:opacity-100 transition-opacity">${u.Password}</td>
-                    <td class="py-5 px-2 text-[10px] text-gray-500">${formatDate(u.ExpiryDate)}</td>
-                    <td class="py-5 px-2 text-[10px] text-emerald-500 font-mono truncate-url" title="${u.URL || 'None'}">${u.URL ? 'CONNECTED' : '-'}</td>
-                    <td class="py-5 px-2 text-right">
-                        <button onclick="deleteUser('${u.Username}')" class="text-red-500/20 group-hover:text-red-500 p-2 transition-colors">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </td>
-                `;
+                const row = document.createElement('tr'); row.className = "hover:bg-white/[0.02] transition-colors group";
+                row.innerHTML = `<td class="py-5 px-2 font-bold text-sky-100">${u.Username}</td><td class="py-5 px-2 font-mono text-[10px] opacity-40 group-hover:opacity-100 transition-opacity">${u.Password}</td><td class="py-5 px-2 text-[10px] text-gray-500">${formatDate(u.ExpiryDate)}</td><td class="py-5 px-2 text-right"><button onclick="deleteUser('${u.Username}')" class="text-red-500/20 group-hover:text-red-500 p-2 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
                 list.appendChild(row);
             });
             lucide.createIcons();
         }
 
-        // -- SYSTEM HELPERS --
         function saveGSheetURL() {
             const url = document.getElementById('gsheet-url').value.trim();
-            if(!url.startsWith("https://script.google.com")) {
-                alert("PROTOCOL ERROR: Invalid Script URL detected.");
-                return;
-            }
-            localStorage.setItem('skyops_gsheet_url', url);
-            gSheetUrl = url;
-            updateDBIndicator();
-            fetchUsers();
-            alert("CLOUD LINK ESTABLISHED");
+            if(!url.startsWith("https://script.google.com")) { alert("PROTOCOL ERROR: Invalid Script URL detected."); return; }
+            localStorage.setItem('skyops_gsheet_url', url); gSheetUrl = url; updateDBIndicator(); fetchUsers(); alert("CLOUD LINK ESTABLISHED");
         }
 
-        function logout() {
-            currentUser = null;
-            location.reload();
-        }
+        function logout() { currentUser = null; location.reload(); }
 
         function switchTab(tab) {
             ['map', 'route', 'waypoint', 'admin'].forEach(s => {
-                const sec = document.getElementById(`content-${s}`);
-                const btn = document.getElementById(`tab-${s}`);
-                if(sec) sec.classList.add('hidden');
-                if(btn) btn.classList.remove('tab-active');
+                const sec = document.getElementById(`content-${s}`); const btn = document.getElementById(`tab-${s}`);
+                if(sec) sec.classList.add('hidden'); if(btn) btn.classList.remove('tab-active');
             });
-            const target = document.getElementById(`content-${tab}`);
-            const tBtn = document.getElementById(`tab-${tab}`);
-            if(target) target.classList.remove('hidden');
-            if(tBtn) tBtn.classList.add('tab-active');
-            if (tab === 'map' && map) setTimeout(() => map.invalidateSize(), 150);
-        }
-
-        function initMap() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-6.125, 106.655], 5);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            const target = document.getElementById(`content-${tab}`); const tBtn = document.getElementById(`tab-${tab}`);
+            if(target) target.classList.remove('hidden'); if(tBtn) tBtn.classList.add('tab-active');
+            if (tab === 'map' && map) setTimeout(() => { map.invalidateSize(); }, 200);
         }
 
         function showAddUserModal() { document.getElementById('user-modal').classList.remove('hidden'); }
