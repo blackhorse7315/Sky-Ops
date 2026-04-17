@@ -370,7 +370,7 @@
 
     <script>
         // -- APP STATE --
-        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbzudAz1sbiXB77BoLg7XyShSN9lbEt2P0sVMiaepdzjGE1kQBswhssH5luDR-6BqnBNGw/exec";
+        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbzRmXQKIumHuDhANvz8MGquqGIXgbnN4FZv-eCmvdSWWUy5y1zIzTuKP7j-xVlcM3QZAw/exec";
         let currentUser = null, users = [], waypoints = [], map, userMarker, wpEditId = null, selectedWpType = 'VFR', activeCoordType = 'dms';
         let gSheetUrl = localStorage.getItem('skyops_gsheet_url') || DEFAULT_GSHEET_URL;
         let layers = { street: null, satellite: null, terrain: null };
@@ -561,10 +561,28 @@
             if (!name || isNaN(lat) || isNaN(lng)) { alert("Mohon lengkapi data."); return; }
             btn.disabled = true; btn.innerHTML = `<div class="loader"></div> SYNCING...`;
             const wpData = { action: 'add_wp', id: wpEditId || Date.now(), name, type: selectedWpType, lat, lng, elevation };
+            
             try {
-                await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(wpData) });
-                setTimeout(async () => { await fetchWaypoints(); closeWaypointModal(); btn.disabled = false; btn.innerHTML = `SAVE WAYPOINT`; }, 1500);
-            } catch(e) { btn.disabled = false; }
+                // Mengirim data sebagai JSON string mentah ke Apps Script
+                await fetch(gSheetUrl, { 
+                    method: 'POST', 
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wpData) 
+                });
+                
+                // Beri waktu bagi Apps Script untuk memproses sebelum memuat ulang list
+                setTimeout(async () => { 
+                    await fetchWaypoints(); 
+                    closeWaypointModal(); 
+                    btn.disabled = false; 
+                    btn.innerHTML = `SAVE WAYPOINT`; 
+                }, 1500);
+            } catch(e) { 
+                btn.disabled = false; 
+                btn.innerHTML = `SAVE WAYPOINT`;
+            }
         }
 
         async function deleteWaypointFromModal() {
@@ -581,7 +599,11 @@
 
         async function executeDelete(id) {
             try {
-                await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete_wp', id: id }) });
+                await fetch(gSheetUrl, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ action: 'delete_wp', id: id }) 
+                });
                 setTimeout(async () => { await fetchWaypoints(); }, 1000);
             } catch(e) { alert("Delete failed"); }
         }
@@ -644,7 +666,7 @@
         function formatDate(d) { if(!d||d==='Infinite') return d; const dt=new Date(d); return `${dt.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()]} ${dt.getFullYear()}`; }
         function switchTab(t) { ['map','route','waypoint','admin'].forEach(s => { const el = document.getElementById(`content-${s}`), btn = document.getElementById(`tab-${s}`); if(el) el.classList.toggle('hidden', s !== t); if(btn) btn.classList.toggle('tab-active', s === t); }); if(t==='map'&&map) setTimeout(()=>map.invalidateSize(), 200); if(t==='waypoint') renderWaypoints(); }
         function closeUserModal() { document.getElementById('user-modal').classList.add('hidden'); }
-        function addUser() { /* logic add user via fetch */ }
+        function addUser() { /* logic admin user */ }
     </script>
 </body>
 </html>
