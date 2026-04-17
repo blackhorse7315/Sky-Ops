@@ -72,16 +72,17 @@
         .wp-icon-apt { width: 24px; height: 24px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 0 8px rgba(59,130,246,0.5); }
         .wp-icon-hpt { width: 24px; height: 24px; background: #f9a8d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9d174d; font-weight: 900; font-size: 11px; border: 2px solid white; box-shadow: 0 0 8px rgba(249,168,212,0.5); }
 
-        /* Custom Labels for Waypoints */
+        /* Updated Labels with Black Box Background */
         .wp-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
+            background: rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;
             color: #fff !important;
             font-size: 10px !important;
-            font-weight: 800 !important;
-            text-shadow: 1px 1px 2px #000, 0 0 5px rgba(14, 165, 233, 0.5) !important;
-            padding: 0 !important;
+            font-weight: 700 !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+            white-space: nowrap !important;
         }
 
         .map-ui-overlay { position: absolute; top: 1.5rem; left: 1.5rem; z-index: 1000; display: flex; flex-direction: column; gap: 1rem; }
@@ -94,7 +95,6 @@
         .gps-pulse-ring { width: 30px; height: 30px; background-color: var(--primary); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: gps-pulse 2s infinite ease-out; opacity: 0; z-index: 1; }
         @keyframes gps-pulse { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } }
 
-        /* Popup Customization */
         .leaflet-popup-content-wrapper { background: rgba(15, 23, 42, 0.95) !important; backdrop-filter: blur(10px) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 1rem !important; padding: 0 !important; overflow: hidden; }
         .leaflet-popup-content { margin: 0 !important; width: auto !important; }
         .leaflet-popup-tip { background: rgba(15, 23, 42, 0.95) !important; }
@@ -190,8 +190,8 @@
                 <div id="map"></div>
                 <div class="map-ui-overlay">
                     <div class="layer-switcher shadow-2xl">
-                        <button onclick="setMapLayer('satellite')" id="btn-layer-satellite" class="layer-btn">SATELLITE</button>
-                        <button onclick="setMapLayer('street')" id="btn-layer-street" class="layer-btn active">STREET</button>
+                        <button onclick="setMapLayer('satellite')" id="btn-layer-satellite" class="layer-btn active">SATELLITE</button>
+                        <button onclick="setMapLayer('street')" id="btn-layer-street" class="layer-btn">STREET</button>
                         <button onclick="setMapLayer('terrain')" id="btn-layer-terrain" class="layer-btn">TERRAIN</button>
                     </div>
                     <button onclick="centerGPS()" class="gps-btn shadow-xl"><i data-lucide="target"></i> CENTER GPS</button>
@@ -212,7 +212,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="fetchWaypoints()" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition"><i data-lucide="refresh-cw" class="w-4 h-4 text-sky-400"></i></button>
-                            <button onclick="openParseModal()" class="px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">PARSE BULK</button>
+                            <button onclick="openParseModal()" class="px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20">PARSE BULK</button>
                             <button onclick="openWaypointModal()" class="btn-primary px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase">ADD NEW</button>
                         </div>
                     </div>
@@ -321,7 +321,7 @@
         </div>
     </div>
 
-    <!-- ADMIN MODAL -->
+    <!-- MODAL ADD USER -->
     <div id="user-modal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
         <div class="glass w-full max-w-sm p-8 rounded-[2rem] border border-white/10">
             <h3 class="text-lg font-bold text-white mb-8">New Pilot Account</h3>
@@ -392,7 +392,9 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
                 } else {
                     launchApp({ ...foundUser, role: 'user' });
                 }
-            } else { errorEl.textContent = "INVALID CREDENTIALS."; errorEl.classList.remove('hidden'); }
+            } else {
+                errorEl.textContent = "INVALID CREDENTIALS."; errorEl.classList.remove('hidden');
+            }
             btn.disabled = false; btn.innerHTML = "AUTHENTICATE";
         };
 
@@ -412,27 +414,28 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
             layers.street = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}');
             layers.satellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
             layers.terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 });
-            map = L.map('map', { zoomControl: true, attributionControl: false, layers: [layers.street] }).setView([-6.2, 106.8], 8);
+            
+            // Set Satellite as default layer
+            map = L.map('map', { 
+                zoomControl: true, 
+                attributionControl: false, 
+                layers: [layers.satellite] 
+            }).setView([-6.2, 106.8], 8);
+            
             waypointLayerGroup = L.layerGroup().addTo(map);
 
-            // Click listener for Map Discovery
             map.on('click', async (e) => {
                 const { lat, lng } = e.latlng;
-                const dmsLat = decToDms(lat, true);
-                const dmsLng = decToDms(lng, false);
+                const dmsLat = decToDms(lat, true), dmsLng = decToDms(lng, false);
                 const dmsStr = `${dmsLat.d}°${dmsLat.m}'${dmsLat.s}"${dmsLat.h} / ${dmsLng.d}°${dmsLng.m}'${dmsLng.s}"${dmsLng.h}`;
 
-                let popup = L.popup()
-                    .setLatLng(e.latlng)
-                    .setContent(`<div class="p-4 min-w-[200px] text-center"><div class="loader mb-2"></div><p class="text-[10px] uppercase text-gray-500">Scanning Satellite...</p></div>`)
-                    .openOn(map);
+                let popup = L.popup().setLatLng(e.latlng).setContent(`<div class="p-4 text-center"><div class="loader mb-2"></div><p class="text-[10px] uppercase text-gray-500">Scanning...</p></div>`).openOn(map);
 
                 try {
                     const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
                     const data = await res.json();
                     const elev = data.elevation ? Math.round(data.elevation[0] * 3.28084) : 0;
-
-                    const content = `
+                    popup.setContent(`
                         <div class="p-4 min-w-[220px]">
                             <div class="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
                                 <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -444,19 +447,14 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
                                 <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Add Waypoint
                             </button>
                         </div>
-                    `;
-                    popup.setContent(content);
+                    `);
                     lucide.createIcons();
-                } catch (err) {
-                    popup.setContent(`<div class="p-4 text-center"><p class="text-[10px] text-red-400">Elevation Sync Failed</p></div>`);
-                }
+                } catch (err) { popup.setContent(`<p class="p-4 text-center text-xs">Error fetching data.</p>`); }
             });
         }
 
         window.addWaypointFromMap = (lat, lng, elev) => {
-            map.closePopup();
-            switchTab('waypoint');
-            openWaypointModal(null, lat, lng, elev);
+            map.closePopup(); switchTab('waypoint'); openWaypointModal(null, lat, lng, elev);
         };
 
         function renderMapMarkers() {
@@ -467,29 +465,20 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
                 if(isNaN(lat)) return;
                 const type = (wp.Type || wp.type || "VFR").toUpperCase();
                 const iconHtml = type.includes('APT') ? `<div class="wp-icon-apt"><i data-lucide="plane" class="w-3 h-3 text-white"></i></div>` : (type.includes('HPT') ? `<div class="wp-icon-hpt">H</div>` : `<div class="wp-icon-vfr"></div>`);
+                const marker = L.marker([lat, lng], { icon: L.divIcon({ className: 'wp-map-marker', html: iconHtml, iconSize: [24, 24], iconAnchor: [12, 12] }) });
                 
-                const dmsLat = decToDms(lat, true);
-                const dmsLng = decToDms(lng, false);
-                const dmsStr = `${dmsLat.d}°${dmsLat.m}'${dmsLat.s}"${dmsLat.h} / ${dmsLng.d}°${dmsLng.m}'${dmsLng.s}"${dmsLng.h}`;
+                const dLat = decToDms(lat, true), dLng = decToDms(lng, false);
+                const dmsStr = `${dLat.d}°${dLat.m}'${dLat.s}"${dLat.h} / ${dLng.d}°${dLng.m}'${dLng.s}"${dLng.h}`;
 
-                const marker = L.marker([lat, lng], { 
-                    icon: L.divIcon({ className: 'wp-map-marker', html: iconHtml, iconSize: [24, 24], iconAnchor: [12, 12] }) 
-                });
-
-                // Permanent Label
                 marker.bindTooltip(wp.Name || wp.name, {
-                    permanent: true,
-                    direction: 'top',
-                    offset: [0, -15],
-                    className: 'wp-label'
+                    permanent: true, direction: 'top', offset: [0, -15], className: 'wp-label'
                 });
 
-                // Interactive Popup Card
-                const card = `
+                marker.bindPopup(`
                     <div class="p-4 min-w-[200px]">
                         <div class="flex items-center justify-between mb-2">
                              <p class="font-bold text-sky-400 text-sm uppercase">${wp.Name || wp.name}</p>
-                             <span class="text-[8px] bg-white/5 px-1.5 py-0.5 rounded border border-white/10">${type}</span>
+                             <span class="text-[8px] bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-gray-400">${type}</span>
                         </div>
                         <p class="text-[10px] font-mono text-gray-400 mb-1 tracking-tighter">${dmsStr}</p>
                         <p class="text-[11px] font-bold text-emerald-400 mb-4 tracking-widest">${wp.Elevation || 0} FT ELEV</p>
@@ -498,9 +487,7 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
                             <button onclick="editWaypointFromMap('${wp.ID || wp.id}')" class="py-2 bg-white/5 text-white text-[9px] font-bold rounded-lg border border-white/10 uppercase transition hover:bg-white/10">Edit</button>
                         </div>
                     </div>
-                `;
-
-                marker.bindPopup(card);
+                `);
                 waypointLayerGroup.addLayer(marker);
             });
             lucide.createIcons();
@@ -509,50 +496,23 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
         window.editWaypointFromMap = (id) => { switchTab('waypoint'); openWaypointModal(id); };
 
         // --- WAYPOINTS ---
-        function openWaypointModal(id = null, preLat = null, preLng = null, preElev = null) {
-            wpEditId = id;
-            document.getElementById('wp-modal').classList.remove('hidden');
-            if (id) {
-                const wp = waypoints.find(w => (w.ID || w.id).toString() === id.toString());
-                if (wp) {
-                    document.getElementById('wp-name').value = wp.Name || wp.name;
-                    selectWpType(wp.Type || wp.type);
-                    const d = decToDms(parseFloat(wp.Lat || wp.lat), true), g = decToDms(parseFloat(wp.Lng || wp.lng), false);
-                    document.getElementById('lat-d').value = d.d; document.getElementById('lat-m').value = d.m; document.getElementById('lat-s').value = d.s; document.getElementById('lat-dir').value = d.h;
-                    document.getElementById('lng-d').value = g.d; document.getElementById('lng-m').value = g.m; document.getElementById('lng-s').value = g.s; document.getElementById('lng-dir').value = g.h;
-                    document.getElementById('wp-elev').value = wp.Elevation;
-                }
-            } else {
-                document.querySelectorAll('#wp-modal input').forEach(i => i.value = '');
-                if (preLat !== null) {
-                    const d = decToDms(preLat, true), g = decToDms(preLng, false);
-                    document.getElementById('lat-d').value = d.d; document.getElementById('lat-m').value = d.m; document.getElementById('lat-s').value = d.s; document.getElementById('lat-dir').value = d.h;
-                    document.getElementById('lng-d').value = g.d; document.getElementById('lng-m').value = g.m; document.getElementById('lng-s').value = g.s; document.getElementById('lng-dir').value = g.h;
-                    document.getElementById('wp-elev').value = preElev || 0;
-                }
-                selectWpType('VFR');
-            }
-            lucide.createIcons();
-        }
-
         function selectWpType(type) {
             selectedWpType = type.toUpperCase();
             document.querySelectorAll('.wp-type-opt').forEach(opt => opt.classList.remove('active'));
             const idMap = { 'VFR': 'vfr', 'APT': 'apt', 'AIRPORT': 'apt', 'HPT': 'hpt', 'HELIPORT': 'hpt' };
-            const cleanId = idMap[selectedWpType] || 'vfr';
-            const btn = document.getElementById(`wp-type-${cleanId}`);
+            const btn = document.getElementById(`wp-type-${idMap[selectedWpType] || 'vfr'}`);
             if(btn) btn.classList.add('active');
         }
 
         async function syncElevation() {
             const lat = dmsToDec(document.getElementById('lat-d').value, document.getElementById('lat-m').value, document.getElementById('lat-s').value, document.getElementById('lat-dir').value);
             const lng = dmsToDec(document.getElementById('lng-d').value, document.getElementById('lng-m').value, document.getElementById('lng-s').value, document.getElementById('lng-dir').value);
-            if(isNaN(lat)) return;
+            if(isNaN(lat) || isNaN(lng)) return;
             document.getElementById('elev-loader').classList.remove('hidden');
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
                 const data = await res.json();
-                if(data && data.elevation) document.getElementById('wp-elev').value = Math.round(data.elevation[0] * 3.28084);
+                if(data.elevation) document.getElementById('wp-elev').value = Math.round(data.elevation[0] * 3.28084);
             } catch(e){}
             document.getElementById('elev-loader').classList.add('hidden');
         }
@@ -561,7 +521,7 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
             const name = document.getElementById('wp-name').value.trim().toUpperCase();
             const lat = dmsToDec(document.getElementById('lat-d').value, document.getElementById('lat-m').value, document.getElementById('lat-s').value, document.getElementById('lat-dir').value);
             const lng = dmsToDec(document.getElementById('lng-d').value, document.getElementById('lng-m').value, document.getElementById('lng-s').value, document.getElementById('lng-dir').value);
-            if(!name || isNaN(lat)) { alert("Invalid data."); return; }
+            if(!name || isNaN(lat)) return;
             const btn = document.getElementById('wp-save-btn');
             btn.disabled = true; btn.innerHTML = "SYNCING...";
             const data = { action: 'add_wp', id: wpEditId || Date.now(), name, type: selectedWpType, lat, lng, elevation: document.getElementById('wp-elev').value || 0 };
@@ -597,16 +557,29 @@ Example: RANDU S07 06'10&quot; E109 19'31&quot; VFR"></textarea>
         function formatDate(d) { if(!d || d === 'Infinite') return d; const dt = new Date(d); return isNaN(dt.getTime()) ? d : `${dt.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()]} ${dt.getFullYear()}`; }
         function switchTab(t) { ['map','route','waypoint','admin'].forEach(s => { document.getElementById(`content-${s}`).classList.toggle('hidden', s !== t); document.getElementById(`tab-${s}`).classList.toggle('tab-active', s === t); }); if(t === 'map' && map) setTimeout(() => map.invalidateSize(), 200); if(t === 'waypoint') renderWaypoints(); }
         function setMapLayer(t) { Object.keys(layers).forEach(k => map.removeLayer(layers[k])); map.addLayer(layers[t]); document.querySelectorAll('.layer-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === t)); }
-        function closeWaypointModal() { document.getElementById('wp-modal').classList.add('hidden'); }
         function logout() { location.reload(); }
         function filterWaypoints() { renderWaypoints(document.getElementById('wp-search-input').value); }
-        async function deleteUser(u) { if(confirm('Delete user?')) { await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete', username: u }) }); setTimeout(fetchUsers, 1500); } }
-        async function deleteWaypoint(id, e) { if(e) e.stopPropagation(); if(confirm('Delete WP?')) { await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete_wp', id: id }) }); setTimeout(fetchWaypoints, 1500); } }
+        function openWaypointModal(id = null, preLat = null, preLng = null, preElev = null) { wpEditId = id; document.getElementById('wp-modal').classList.remove('hidden'); if(id) { const wp = waypoints.find(w => (w.ID || w.id).toString() === id.toString()); if(wp) { document.getElementById('wp-name').value = wp.Name || wp.name; selectWpType(wp.Type || wp.type); const latDms = decToDms(parseFloat(wp.Lat || wp.lat), true), lngDms = decToDms(parseFloat(wp.Lng || wp.lng), false); document.getElementById('lat-d').value = latDms.d; document.getElementById('lat-m').value = latDms.m; document.getElementById('lat-s').value = latDms.s; document.getElementById('lat-dir').value = latDms.h; document.getElementById('lng-d').value = lngDms.d; document.getElementById('lng-m').value = lngDms.m; document.getElementById('lng-s').value = lngDms.s; document.getElementById('lng-dir').value = lngDms.h; document.getElementById('wp-elev').value = wp.Elevation; } } else { document.querySelectorAll('#wp-modal input').forEach(i => i.value = ''); if(preLat !== null) { const d = decToDms(preLat, true), g = decToDms(preLng, false); document.getElementById('lat-d').value = d.d; document.getElementById('lat-m').value = d.m; document.getElementById('lat-s').value = d.s; document.getElementById('lat-dir').value = d.h; document.getElementById('lng-d').value = g.d; document.getElementById('lng-m').value = g.m; document.getElementById('lng-s').value = g.s; document.getElementById('lng-dir').value = g.h; document.getElementById('wp-elev').value = preElev; } selectWpType('VFR'); } lucide.createIcons(); }
+        function closeWaypointModal() { document.getElementById('wp-modal').classList.add('hidden'); }
         function showAddUserModal() { document.getElementById('user-modal').classList.remove('hidden'); }
         function closeUserModal() { document.getElementById('user-modal').classList.add('hidden'); }
         function openParseModal() { document.getElementById('parse-modal').classList.remove('hidden'); }
         function closeParseModal() { document.getElementById('parse-modal').classList.add('hidden'); }
-        async function executeBatchImport() { /* Existing Bulk Parse Logic */ }
+        async function deleteUser(u) { if(confirm('Delete user?')) { await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete', username: u }) }); setTimeout(fetchUsers, 1500); } }
+        async function deleteWaypoint(id, e) { if(e) e.stopPropagation(); if(confirm('Delete WP?')) { await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'delete_wp', id: id }) }); setTimeout(fetchWaypoints, 1500); } }
+        async function executeBatchImport() {
+            const input = document.getElementById('parse-input').value.trim(); if(!input) return; const lines = input.split('\n'); const regex = /([A-Z0-9_-]+)\s+([NS])(\d{1,2})\s+(\d{1,2})'(\d{1,2}(?:\.\d+)?)"\s+([EW])(\d{1,3})\s+(\d{1,2})'(\d{1,2}(?:\.\d+)?)"\s+([A-Z]+)/i;
+            document.getElementById('parse-import-btn').disabled = true;
+            for(let line of lines) {
+                const m = line.trim().match(regex);
+                if(m) {
+                    const lat = dmsToDec(m[3], m[4], m[5], m[2]), lng = dmsToDec(m[7], m[8], m[9], m[6]);
+                    let elev = "0"; try { const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`); const d = await res.json(); elev = Math.round(d.elevation[0] * 3.28084).toString(); } catch(e){}
+                    await fetch(gSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'add_wp', id: Date.now() + Math.random(), name: m[1], type: m[10], lat, lng, elevation: elev }) });
+                }
+            }
+            alert("Bulk import complete."); closeParseModal(); fetchWaypoints(); document.getElementById('parse-import-btn').disabled = false;
+        }
         function renderAdminUsers() { const list = document.getElementById('admin-user-list'); if(!list) return; list.innerHTML = users.map(u => `<tr><td class="py-4 px-2 font-bold text-white">${u.Username || u.username}</td><td class="py-4 px-2 opacity-50 text-white">${u.Password || u.password}</td><td class="py-4 px-2 opacity-50 text-white">${u.ExpiryDate || u.expiry}</td><td class="py-4 px-2 text-right"><button onclick="deleteUser('${u.Username || u.username}')" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join(''); lucide.createIcons(); }
         function initPWA() {}
     </script>
