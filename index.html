@@ -288,7 +288,7 @@
 
     <!-- MODAL -->
     <div id="user-modal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-        <div class="glass w-full max-w-sm p-6 rounded-2xl fade-in">
+        <div class="glass w-full max-sm p-6 rounded-2xl fade-in">
             <h3 class="text-lg font-bold mb-6 flex items-center gap-2 border-b border-white/5 pb-4">
                 <i data-lucide="user-plus" class="w-5 h-5 text-sky-400"></i> New Account
             </h3>
@@ -336,6 +336,25 @@
 
             initMap();
         };
+
+        // --- HELPER: DATE FORMATTER ---
+        function formatDate(dateString) {
+            if (!dateString || dateString === 'Infinite' || dateString === 'Unlimited') return dateString;
+            
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+
+            const months = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+
+            return `${day} ${month} ${year}`;
+        }
 
         function updateDBIndicator() {
             const dot = document.getElementById('status-dot');
@@ -425,7 +444,9 @@
             document.getElementById('login-page').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('header-greeting').textContent = `Welcome, Capt. ${user.username}`;
-            document.getElementById('expiry-info').textContent = `Valid Until: ${user.expiry}`;
+            
+            // FORMATTED DATE DISPLAY
+            document.getElementById('expiry-info').textContent = `Valid Until: ${formatDate(user.expiry)}`;
             
             // Handle User URL
             const urlContainer = document.getElementById('user-url-container');
@@ -507,7 +528,7 @@
                 row.innerHTML = `
                     <td class="py-3 px-2 font-medium">${u.Username}</td>
                     <td class="py-3 px-2 font-mono text-xs opacity-60">${u.Password}</td>
-                    <td class="py-3 px-2 text-xs">${u.ExpiryDate}</td>
+                    <td class="py-3 px-2 text-xs">${formatDate(u.ExpiryDate)}</td>
                     <td class="py-3 px-2 text-xs text-sky-400 font-mono truncate-url" title="${u.URL || 'No Link'}">${u.URL || '-'}</td>
                     <td class="py-3 px-2 text-right">
                         <button onclick="deleteUser('${u.Username}')" class="text-red-400/50 group-hover:text-red-400 p-1">
