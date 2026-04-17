@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyOps Navigation Pro V.00</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --secondary: #6366f1;
+            --bg-dark: #020617;
+            --glass: rgba(15, 23, 42, 0.7);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeInitial 3s forwards;
+        }
+
+        @keyframes fadeInitial {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 1rem;
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        .tab-active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            background: rgba(14, 165, 233, 0.1);
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .loader {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .truncate-url {
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div class="text-center">
+            <div class="mb-4 inline-block p-4 rounded-full bg-sky-500/10 border border-sky-500/20">
+                <i data-lucide="plane-takeoff" class="w-16 h-16 text-sky-400"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-widest text-white mb-2">SKYOPS NAVIGATION</h1>
+            <p class="text-sky-400 font-mono tracking-tighter uppercase">Professional Flight System V.00</p>
+            <div class="mt-8 flex justify-center">
+                <div class="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-sky-500 animate-[loading_2.5s_ease-in-out]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIN PAGE -->
+    <div id="login-page" class="hidden h-full flex items-center justify-center p-6">
+        <div class="glass w-full max-w-md p-8 rounded-3xl fade-in shadow-2xl relative">
+            <div id="db-status" class="absolute top-4 right-6 flex items-center gap-2">
+                <span class="text-[10px] uppercase font-bold text-gray-500">Cloud DB</span>
+                <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            </div>
+
+            <div class="text-center mb-8">
+                <i data-lucide="shield-check" class="w-12 h-12 text-sky-400 mx-auto mb-4"></i>
+                <h2 class="text-2xl font-bold">Authentication</h2>
+                <p class="text-gray-400 text-sm">Cloud-Based Navigation System</p>
+            </div>
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs uppercase text-gray-400 mb-2 ml-1">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-3 rounded-xl" placeholder="Enter username..." required>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase text-gray-400 mb-2 ml-1">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-3 rounded-xl" placeholder="••••••••" required>
+                </div>
+                <div id="login-error" class="hidden text-red-400 text-xs text-center py-2 bg-red-400/10 rounded-lg"></div>
+                <button type="submit" id="login-btn" class="btn-primary w-full py-3 rounded-xl font-semibold shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2">
+                    SIGN IN
+                </button>
+            </form>
+            <p id="db-warning" class="text-[10px] text-center mt-6 text-yellow-500/70 hidden italic">
+                *Database not connected. Please login as Admin to configure URL.
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN APP STRUCTURE -->
+    <div id="main-app" class="hidden h-full flex flex-col">
+        <header class="glass px-6 py-4 flex items-center justify-between border-b border-white/5">
+            <div>
+                <h1 class="text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="navigation" class="w-5 h-5 text-sky-400"></i>
+                    SkyOps Navigation Pro V.00
+                </h1>
+                <p id="header-greeting" class="text-xs text-gray-400">Welcome, Capt. [User]</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Action URL for Pilots -->
+                <div id="user-url-container" class="hidden">
+                    <a id="user-flight-link" href="#" target="_blank" class="flex items-center gap-2 px-3 py-1.5 bg-sky-500/20 text-sky-400 rounded-lg border border-sky-500/30 text-xs font-bold hover:bg-sky-500/30 transition-all">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i> FLIGHT PLAN
+                    </a>
+                </div>
+                
+                <div class="text-right">
+                    <p class="text-[10px] uppercase text-gray-500">Status</p>
+                    <p id="expiry-info" class="text-xs font-mono text-emerald-400">Checking...</p>
+                </div>
+                <button onclick="logout()" class="p-2 rounded-lg hover:bg-white/5 transition" title="Logout">
+                    <i data-lucide="log-out" class="w-5 h-5 text-gray-400"></i>
+                </button>
+            </div>
+        </header>
+
+        <nav class="glass mx-6 mt-4 rounded-xl flex items-center justify-center gap-1 p-1">
+            <button onclick="switchTab('map')" id="tab-map" class="flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all">
+                <i data-lucide="map" class="w-4 h-4"></i> Map
+            </button>
+            <button onclick="switchTab('route')" id="tab-route" class="flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all">
+                <i data-lucide="milestone" class="w-4 h-4"></i> Route
+            </button>
+            <button onclick="switchTab('waypoint')" id="tab-waypoint" class="flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all">
+                <i data-lucide="database" class="w-4 h-4"></i> Waypoint Database
+            </button>
+            <button onclick="switchTab('admin')" id="tab-admin" class="hidden flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all">
+                <i data-lucide="settings" class="w-4 h-4"></i> Control Panel
+            </button>
+        </nav>
+
+        <main class="flex-1 p-6 overflow-hidden">
+            <section id="content-map" class="h-full relative fade-in">
+                <div id="map"></div>
+            </section>
+
+            <section id="content-route" class="hidden h-full fade-in">
+                <div class="glass h-full rounded-2xl p-6">
+                    <h2 class="text-xl font-bold mb-6">Flight Routes</h2>
+                    <p class="text-gray-400 italic">Route management system ready.</p>
+                </div>
+            </section>
+
+            <section id="content-waypoint" class="hidden h-full fade-in">
+                <div class="glass h-full rounded-2xl p-6">
+                    <h2 class="text-xl font-bold mb-6">Waypoint Database</h2>
+                    <p class="text-gray-400 italic">AIRAC Navigation Data active.</p>
+                </div>
+            </section>
+
+            <section id="content-admin" class="hidden h-full fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 h-full">
+                    <div class="glass md:col-span-3 rounded-2xl p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold">Manage Cloud Users</h2>
+                            <div class="flex gap-2">
+                                <button onclick="fetchUsers()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10" title="Refresh List">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4 text-sky-400"></i>
+                                </button>
+                                <button onclick="showAddUserModal()" class="btn-primary px-4 py-2 rounded-lg text-xs font-bold">ADD NEW ACCOUNT</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto">
+                            <div id="admin-loader" class="hidden py-10 text-center">
+                                <div class="loader"></div>
+                                <p class="text-xs text-gray-500 mt-2 tracking-widest uppercase">Fetching Cloud Data...</p>
+                            </div>
+                            <table id="admin-table" class="w-full text-left text-sm">
+                                <thead class="text-gray-400 border-b border-white/5 text-[10px] uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-3 px-2">Username</th>
+                                        <th class="py-3 px-2">Password</th>
+                                        <th class="py-3 px-2">Expired</th>
+                                        <th class="py-3 px-2">Attached URL</th>
+                                        <th class="py-3 px-2 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-user-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="glass rounded-2xl p-6 border-l-4 border-sky-500">
+                            <h3 class="font-bold mb-2 flex items-center gap-2">
+                                <i data-lucide="cloud" class="w-4 h-4 text-sky-400"></i> Cloud Config
+                            </h3>
+                            <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-wider">Web App URL</p>
+                            <input type="text" id="gsheet-url" class="w-full px-3 py-2 text-xs rounded-lg mb-4 font-mono" placeholder="Paste Script URL...">
+                            <button onclick="saveGSheetURL()" class="w-full py-2 bg-emerald-500/10 text-emerald-400 text-xs rounded-lg hover:bg-emerald-500/20 border border-emerald-500/20 font-bold transition-all">
+                                UPDATE SYNC
+                            </button>
+                        </div>
+                        <div class="glass rounded-2xl p-6">
+                            <h3 class="font-bold mb-2 flex items-center gap-2">
+                                <i data-lucide="lock" class="w-4 h-4 text-sky-400"></i> Admin Identity
+                            </h3>
+                            <div class="p-3 rounded-lg bg-white/5 space-y-2 mt-4">
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-gray-500 uppercase">User:</span>
+                                    <span class="text-white font-mono">admin</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-gray-500 uppercase">Pass:</span>
+                                    <span class="text-white font-mono">ramdan28</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL -->
+    <div id="user-modal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+        <div class="glass w-full max-w-sm p-6 rounded-2xl fade-in">
+            <h3 class="text-lg font-bold mb-6 flex items-center gap-2 border-b border-white/5 pb-4">
+                <i data-lucide="user-plus" class="w-5 h-5 text-sky-400"></i> New Account
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-widest">Username</label>
+                    <input type="text" id="new-username" class="w-full px-4 py-2 rounded-lg text-sm" placeholder="Pilot ID">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-widest">Password</label>
+                    <input type="text" id="new-password" class="w-full px-4 py-2 rounded-lg text-sm" placeholder="Access Pass">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-widest">Expiration</label>
+                    <input type="date" id="new-expiry" class="w-full px-4 py-2 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-widest">Flight Plan URL (Optional)</label>
+                    <input type="text" id="new-url" class="w-full px-4 py-2 rounded-lg text-sm" placeholder="https://...">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="closeUserModal()" class="flex-1 py-2 text-sm bg-white/5 rounded-lg">Cancel</button>
+                    <button onclick="addUser()" id="add-user-btn" class="flex-1 py-2 text-sm btn-primary rounded-lg font-bold">SAVE TO CLOUD</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let users = [];
+        let gSheetUrl = localStorage.getItem('skyops_gsheet_url') || "";
+        let map;
+
+        window.onload = () => {
+            lucide.createIcons();
+            document.getElementById('gsheet-url').value = gSheetUrl;
+            updateDBIndicator();
+
+            setTimeout(() => {
+                document.getElementById('splash-screen').classList.add('hidden');
+                document.getElementById('login-page').classList.remove('hidden');
+                if(gSheetUrl) fetchUsers(); 
+            }, 3000);
+
+            initMap();
+        };
+
+        function updateDBIndicator() {
+            const dot = document.getElementById('status-dot');
+            const warning = document.getElementById('db-warning');
+            if(gSheetUrl && gSheetUrl.includes("script.google.com")) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                warning.classList.add('hidden');
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                warning.classList.remove('hidden');
+            }
+        }
+
+        async function fetchUsers() {
+            if(!gSheetUrl) return;
+            const loader = document.getElementById('admin-loader');
+            const table = document.getElementById('admin-table');
+            if(loader) loader.classList.remove('hidden');
+            if(table) table.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${gSheetUrl}?cb=${Date.now()}`);
+                users = await response.json();
+                if(currentUser && currentUser.role === 'admin') renderAdminUsers();
+            } catch (err) {
+                console.error("Fetch Error:", err);
+            } finally {
+                if(loader) loader.classList.add('hidden');
+                if(table) table.classList.remove('hidden');
+            }
+        }
+
+        const loginForm = document.getElementById('login-form');
+        loginForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+
+            errorEl.classList.add('hidden');
+            
+            if (u === 'admin' && p === 'ramdan28') {
+                launchApp({ username: 'Administrator', role: 'admin', expiry: 'Infinite' });
+                return;
+            }
+
+            if(!gSheetUrl) {
+                errorEl.textContent = "Cloud connection missing. Contact Admin.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="loader"></div> Processing...`;
+
+            await fetchUsers(); 
+            
+            const foundUser = users.find(user => String(user.Username).toLowerCase() === u.toLowerCase() && String(user.Password) === p);
+            
+            if (foundUser) {
+                const now = new Date();
+                const expiryDate = new Date(foundUser.ExpiryDate);
+                
+                if (now > expiryDate) {
+                    errorEl.textContent = "Account expired. Access denied.";
+                    errorEl.classList.remove('hidden');
+                } else {
+                    launchApp({ 
+                        username: foundUser.Username, 
+                        role: 'user', 
+                        expiry: foundUser.ExpiryDate,
+                        url: foundUser.URL 
+                    });
+                }
+            } else {
+                errorEl.textContent = "Invalid identity credentials.";
+                errorEl.classList.remove('hidden');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `SIGN IN`;
+        };
+
+        function launchApp(user) {
+            currentUser = user;
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('header-greeting').textContent = `Welcome, Capt. ${user.username}`;
+            document.getElementById('expiry-info').textContent = `Valid Until: ${user.expiry}`;
+            
+            // Handle User URL
+            const urlContainer = document.getElementById('user-url-container');
+            const urlLink = document.getElementById('user-flight-link');
+            if(user.role === 'user' && user.url) {
+                urlLink.href = user.url;
+                urlContainer.classList.remove('hidden');
+            } else {
+                urlContainer.classList.add('hidden');
+            }
+
+            const adminTab = document.getElementById('tab-admin');
+            if (user.role === 'admin') {
+                adminTab.classList.remove('hidden');
+                renderAdminUsers();
+            } else {
+                adminTab.classList.add('hidden');
+                users = []; 
+            }
+            switchTab('map');
+            lucide.createIcons();
+        }
+
+        async function addUser() {
+            const u = document.getElementById('new-username').value.trim();
+            const p = document.getElementById('new-password').value.trim();
+            const e = document.getElementById('new-expiry').value;
+            const url = document.getElementById('new-url').value.trim();
+            const btn = document.getElementById('add-user-btn');
+
+            if (!u || !p || !e || !gSheetUrl) return;
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="loader"></div> Updating Cloud...`;
+
+            try {
+                await fetch(gSheetUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'add', username: u, password: p, expiry: e, url: url })
+                });
+                
+                setTimeout(async () => {
+                    await fetchUsers();
+                    closeUserModal();
+                    btn.disabled = false;
+                    btn.innerHTML = `SAVE TO CLOUD`;
+                    document.getElementById('new-username').value = "";
+                    document.getElementById('new-password').value = "";
+                    document.getElementById('new-url').value = "";
+                }, 1500);
+            } catch (err) {
+                alert("Sync Failed.");
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteUser(username) {
+            if(!confirm(`Delete Pilot ID: ${username}?`)) return;
+            try {
+                await fetch(gSheetUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'delete', username: username })
+                });
+                setTimeout(() => fetchUsers(), 1500);
+            } catch (err) {
+                alert("Delete failed.");
+            }
+        }
+
+        function renderAdminUsers() {
+            const list = document.getElementById('admin-user-list');
+            if(!list) return;
+            list.innerHTML = "";
+            users.forEach((u) => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-white/5 hover:bg-white/10 transition group";
+                row.innerHTML = `
+                    <td class="py-3 px-2 font-medium">${u.Username}</td>
+                    <td class="py-3 px-2 font-mono text-xs opacity-60">${u.Password}</td>
+                    <td class="py-3 px-2 text-xs">${u.ExpiryDate}</td>
+                    <td class="py-3 px-2 text-xs text-sky-400 font-mono truncate-url" title="${u.URL || 'No Link'}">${u.URL || '-'}</td>
+                    <td class="py-3 px-2 text-right">
+                        <button onclick="deleteUser('${u.Username}')" class="text-red-400/50 group-hover:text-red-400 p-1">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                list.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function saveGSheetURL() {
+            const url = document.getElementById('gsheet-url').value.trim();
+            if(!url.startsWith("https://script.google.com")) {
+                alert("Invalid Script URL.");
+                return;
+            }
+            localStorage.setItem('skyops_gsheet_url', url);
+            gSheetUrl = url;
+            updateDBIndicator();
+            fetchUsers();
+            alert("Database Synced.");
+        }
+
+        function logout() {
+            currentUser = null;
+            location.reload();
+        }
+
+        function switchTab(tab) {
+            ['map', 'route', 'waypoint', 'admin'].forEach(s => {
+                const sec = document.getElementById(`content-${s}`);
+                const btn = document.getElementById(`tab-${s}`);
+                if(sec) sec.classList.add('hidden');
+                if(btn) btn.classList.remove('tab-active');
+            });
+            const target = document.getElementById(`content-${tab}`);
+            const tBtn = document.getElementById(`tab-${tab}`);
+            if(target) target.classList.remove('hidden');
+            if(tBtn) tBtn.classList.add('tab-active');
+            if (tab === 'map' && map) setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-6.125, 106.655], 5);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        }
+
+        function showAddUserModal() { document.getElementById('user-modal').classList.remove('hidden'); }
+        function closeUserModal() { document.getElementById('user-modal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
